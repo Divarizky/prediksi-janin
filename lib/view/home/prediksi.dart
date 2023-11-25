@@ -135,47 +135,6 @@ class _PrediksiFormState extends State<PrediksiForm> {
     {'name': 'Tidak ada', 'isChecked': false},
   ];
 
-  Future<void> predictJanin() async {
-    final url =
-        'http://153.92.4.162:5001/predict'; // Ganti dengan alamat Flask server
-    final headers = {'Content-Type': 'application/json'};
-    final data = {
-      'bloodType': bloodTypeController.text,
-      'gestationalAge': gestationalAgeController.text,
-      'caesarHistory': caesarHistoryController.text,
-    };
-
-    var response = await http.post(
-      Uri.parse(url),
-      headers: headers,
-      body: jsonEncode(data),
-    );
-
-    if (response.statusCode == 200) {
-      PrediksiProvider prediksiProvider =
-          Provider.of<PrediksiProvider>(context, listen: false);
-      Auth auth = Provider.of<Auth>(context, listen: false);
-
-      final responseData = jsonDecode(response.body);
-      setState(() {
-        prediksiProvider.setResult(
-          responseData['result'] == 1 ? 'normal' : 'kurang baik',
-        );
-
-        // firestore
-        FirebaseFirestore.instance.collection("hasil_prediksi").add({
-          'id': auth.id,
-          'result': prediksiProvider.result,
-          'timestamp': FieldValue.serverTimestamp(),
-        });
-      });
-    } else {
-      setState(() {
-        result = 'Error: ${response.statusCode}';
-      });
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -524,10 +483,9 @@ class _PrediksiFormState extends State<PrediksiForm> {
                     setState(() {
                       selectedHamil = value;
 
-                      // Logika untuk menentukan nilai pembobotan hamilKeberapa
-                      if (selectedHamil != null &&
-                          int.tryParse(selectedHamil!)! >= 4) {
-                        // Jika "hamil keberapa" lebih besar atau sama dengan 4, tambahkan skor
+                      // Logika untuk menentukan nilai pembobotan untuk rhesusDarah
+                      if (selectedHamil == "Lebih dari 4") {
+                        // Jika jumlah "Hamil ke Berapa?" adalah "Lebih dari 4", tambahkan skor
                         score += 1;
                       }
                     });
@@ -594,10 +552,9 @@ class _PrediksiFormState extends State<PrediksiForm> {
                     setState(() {
                       selectedLahir = value;
 
-                      // Logika untuk menentukan nilai pembobotan jumlahPersalinan
-                      if (selectedLahir != null &&
-                          int.tryParse(selectedLahir!)! >= 4) {
-                        // Jika "jumlah persalinan" lebih besar atau sama dengan 4, tambahkan skor
+                      // Logika untuk menentukan nilai pembobotan untuk rhesusDarah
+                      if (selectedLahir == "Lebih dari 4") {
+                        // Jika jumlah persalinan adalah "Lebih dari 4", tambahkan skor
                         score += 1;
                       }
                     });
@@ -663,10 +620,9 @@ class _PrediksiFormState extends State<PrediksiForm> {
                     setState(() {
                       selectedGugur = value;
 
-                      // Logika untuk menentukan nilai pembobotan jumlahKegugugran
-                      if (selectedGugur != null &&
-                          int.tryParse(selectedGugur!)! >= 3) {
-                        // Jika "hamil keberapa" lebih besar atau sama dengan 4, tambahkan skor
+                      // Logika untuk menentukan nilai pembobotan untuk rhesusDarah
+                      if (selectedGugur == "Lebih dari 3") {
+                        // Jika jumlah keguguran adalah "Lebih dari 4", tambahkan skor
                         score += 1;
                       }
                     });
@@ -1718,39 +1674,83 @@ class _PrediksiFormState extends State<PrediksiForm> {
                       backgroundColor: pinkColor,
                     ),
                     onPressed: () {
-                      predictJanin();
+                      // Pop up konfirmasi form
                       showDialog(
                         context: context,
                         builder: (context) {
-                          final prediksiProvider =
-                              Provider.of<PrediksiProvider>(context,
-                                  listen: false);
                           return AlertDialog(
-                            title: Text('Hasil Prediksi'),
                             content: Text(
-                              "Janin anda dalam keadaan: ${score}",
+                              'Apakah anda sudah mengisi seluruh form dengan benar?',
+                              style: labelText,
                             ),
                             actions: [
-                              ElevatedButton(
-                                style: ElevatedButton.styleFrom(
-                                  shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(12)),
+                              TextButton(
+                                style: TextButton.styleFrom(
                                   backgroundColor: pinkColor,
                                 ),
+                                child: Text(
+                                  'Kembali',
+                                  style: buttonText.copyWith(color: whiteColor),
+                                ),
+                                onPressed: () => Navigator.of(context).pop(),
+                              ),
+                              TextButton(
+                                style: TextButton.styleFrom(
+                                  backgroundColor: pinkColor,
+                                ),
+                                child: Text(
+                                  'Berikutnya',
+                                  style: buttonText.copyWith(color: whiteColor),
+                                ),
                                 onPressed: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) => Navbar(),
-                                    ),
+                                  Navigator.of(context).pop();
+
+                                  // Pop up hasil Prediksi Janin
+                                  showDialog(
+                                    context: context,
+                                    builder: (context) {
+                                      String prediksiResult;
+                                      // logika untuk menampilkan perhitungan skor
+                                      if (score >= 0 && score < 3) {
+                                        prediksiResult = 'Janin normal';
+                                      } else if (score >= 3) {
+                                        prediksiResult = 'Janin Berisiko';
+                                      } else {
+                                        prediksiResult =
+                                            'Error: Skor tidak valid';
+                                      }
+
+                                      return AlertDialog(
+                                        title: Text('Hasil Prediksi'),
+                                        content: Text(
+                                          "Janin anda dalam keadaan: \n$prediksiResult",
+                                          style: buttonText,
+                                        ),
+                                        actions: [
+                                          TextButton(
+                                            style: TextButton.styleFrom(
+                                              backgroundColor: pinkColor,
+                                            ),
+                                            child: Text(
+                                              'OK',
+                                              style: buttonText.copyWith(
+                                                  color: whiteColor),
+                                            ),
+                                            onPressed: () {
+                                              Navigator.push(
+                                                context,
+                                                MaterialPageRoute(
+                                                  builder: (context) =>
+                                                      Navbar(),
+                                                ),
+                                              );
+                                            },
+                                          ),
+                                        ],
+                                      );
+                                    },
                                   );
                                 },
-                                child: Text(
-                                  'Baik',
-                                  style: buttonText.copyWith(
-                                    color: whiteColor,
-                                  ),
-                                ),
                               ),
                             ],
                           );
