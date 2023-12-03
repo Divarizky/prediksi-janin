@@ -1,6 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:janin/models/produkmodel.dart';
 import 'package:janin/models/tipsmodel.dart';
@@ -16,6 +16,7 @@ import 'package:janin/view/home/widget/produkcard.dart';
 import 'package:janin/view/home/widget/tipscard.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class Beranda extends StatefulWidget {
   // final String idDoc;
@@ -53,7 +54,6 @@ class _BerandaState extends State<Beranda> {
       backgroundColor: Colors.white,
       body: SafeArea(
         child: Padding(
-          //app_bar
           padding: const EdgeInsets.all(20),
           child: SingleChildScrollView(
             child: Column(
@@ -63,7 +63,7 @@ class _BerandaState extends State<Beranda> {
                   height: 20,
                 ),
 
-                //user_name
+                // username
                 Text(
                   'Hi, Moms',
                   style: labelText.copyWith(fontWeight: FontWeight.bold),
@@ -107,50 +107,51 @@ class _BerandaState extends State<Beranda> {
                     }
                   },
                 ),
+
                 const SizedBox(
                   height: 20,
                 ),
 
-                //prediksi_form
+                // Banner Prediksi Janin
                 Container(
                   padding: EdgeInsets.all(20),
                   decoration: BoxDecoration(
                     color: Color(0xffffe0d0),
                     borderRadius: BorderRadius.circular(12),
                   ),
-
-                  //prediksi_animation
                   child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Container(
+                      SvgPicture.asset(
+                        'assets/image/prediction.svg',
                         height: 100,
-                        width: 100,
                       ),
-                      SizedBox(
-                        width: 20,
-                      ),
+                      SizedBox(width: 20),
 
-                      //content_prediksiForm
+                      // Konten Banner
                       Expanded(
                         child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                          // crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Untuk mengetahui kondisi janin anda dapat mengisi form dengan klik button prediksi janin',
-                              style: descriptionText.copyWith(fontSize: 12),
-                            ),
+                                'Untuk mengetahui kondisi janin klik Prediksi Janin',
+                                style: descriptionText.copyWith(fontSize: 12)),
 
                             SizedBox(
                               height: 10,
                             ),
 
-                            //prediksiForm_button
-                            ElevatedButton(
-                              style: ElevatedButton.styleFrom(
-                                padding: EdgeInsets.all(12),
-                                backgroundColor: pinkColor,
-                                shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12)),
+                            // Button Prediksi Form
+                            TextButton(
+                              style: TextButton.styleFrom(
+                                  padding: EdgeInsets.symmetric(
+                                      horizontal: 25, vertical: 10),
+                                  backgroundColor: pinkColor,
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12))),
+                              child: Text(
+                                'Prediksi Janin',
+                                style: buttonText.copyWith(color: whiteColor),
                               ),
                               onPressed: () {
                                 Navigator.push(
@@ -158,10 +159,25 @@ class _BerandaState extends State<Beranda> {
                                     MaterialPageRoute(
                                         builder: (context) => PrediksiForm()));
                               },
-                              child: Center(
-                                child: Text('Prediksi Janin'),
-                              ),
                             ),
+
+                            // ElevatedButton(
+                            //   style: ElevatedButton.styleFrom(
+                            //     padding: EdgeInsets.all(12),
+                            //     backgroundColor: pinkColor,
+                            //     shape: RoundedRectangleBorder(
+                            //         borderRadius: BorderRadius.circular(12)),
+                            //   ),
+                            // onPressed: () {
+                            //   Navigator.push(
+                            //       context,
+                            //       MaterialPageRoute(
+                            //           builder: (context) => PrediksiForm()));
+                            // },
+                            //   child: Center(
+                            //     child: Text('Prediksi Janin'),
+                            //   ),
+                            // ),
                           ],
                         ),
                       ),
@@ -170,8 +186,9 @@ class _BerandaState extends State<Beranda> {
                 ),
 
                 const SizedBox(
-                  height: 40,
+                  height: 30,
                 ),
+
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [

@@ -1,13 +1,13 @@
-import 'dart:convert';
-// import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:janin/view/home/navbar.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:http/http.dart' as http;
+import 'package:provider/provider.dart';
 import 'package:janin/provider/auth.dart';
 import 'package:janin/provider/prediksi.dart';
-import 'package:janin/view/home/navbar.dart';
-import 'package:provider/provider.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../theme.dart';
+import 'dart:convert';
+// import 'dart:math';
 
 // OpsiRadio
 enum selectedRadiohamil { yes, no, others, n }
@@ -40,17 +40,74 @@ class PrediksiForm extends StatefulWidget {
 }
 
 class _PrediksiFormState extends State<PrediksiForm> {
-  final TextEditingController bloodTypeController = TextEditingController();
-  final TextEditingController gestationalAgeController =
-      TextEditingController();
-  final TextEditingController caesarHistoryController = TextEditingController();
+  final TextEditingController usia_ibu = TextEditingController();
+  final TextEditingController usia_kandungan = TextEditingController();
+  final TextEditingController riwayat_caesar = TextEditingController();
   String result = "";
+
+  Future<void> predictJanin() async {
+    final url =
+        'http://153.92.4.162:5001/predict'; // Ganti dengan alamat Flask server
+    final headers = {'Content-Type': 'application/json'};
+    final data = {
+      'usia_ibu': usia_ibu.text,
+      'usia_kandungan': usia_kandungan.text,
+      'golongan_darah': selectedGolongan_darah,
+      'rhesus': selectedRhesus,
+      'hamil_ke_brp': selectedHamil,
+      'jumlah_keguguran': selectedGugur,
+      'kehamilan_diinginkan': selectedRadiohamil,
+      'penggunaan_alkohol': selectedRadioAlchohol,
+      'perokok': selectedRadioSmoker,
+      'narkoba': selectedRadioDrugs,
+      'polusi': selectedRadioPoluted,
+      'pendarahaan_pasca_lahir': selectedRadioBleedingAfter,
+      'pendarahan_ketika_hamil': selectedRadioBleedingWhile,
+      'gadget': selectedRadioGadget,
+      'riwayat_kelainan': selectedRadioAbnormalities,
+      'alergi': selectedRadioAllergy,
+      'pernah_caesar': selectedRadioCaesar,
+      'riwayat_caesar': riwayat_caesar.text,
+      'riwayat_penyakit': sicknessCategories,
+      'penyakit_turunan': inheritedSickness,
+    };
+
+    var response = await http.post(
+      Uri.parse(url),
+      headers: headers,
+      body: jsonEncode(data),
+    );
+
+    if (response.statusCode == 200) {
+      PrediksiProvider prediksiProvider =
+          Provider.of<PrediksiProvider>(context, listen: false);
+      Auth auth = Provider.of<Auth>(context, listen: false);
+
+      final responseData = jsonDecode(response.body);
+      setState(() {
+        prediksiProvider.setResult(
+          responseData['result'] == 1 ? 'Janin Normal' : 'Janin Berisiko',
+        );
+
+        // firestore
+        FirebaseFirestore.instance.collection("hasil_prediksi").add({
+          'id': auth.id,
+          'result': prediksiProvider.result,
+          'timestamp': FieldValue.serverTimestamp(),
+        });
+      });
+    } else {
+      setState(() {
+        result = 'Error: ${response.statusCode}';
+      });
+    }
+  }
 
   // Inisialisasi variabel untuk menyimpan nilai pembobotan
   int score = 0;
 
   // List DropDown Golongan Darah
-  String? selectedBloodtype;
+  String? selectedGolongan_darah;
   List<String> bloodType = [
     "A",
     "B",
@@ -80,6 +137,7 @@ class _PrediksiFormState extends State<PrediksiForm> {
   // List Dropdown Jumlah Persalinan
   String? selectedLahir;
   List<String> Lahir = [
+    "0",
     "1",
     "2",
     "3",
@@ -113,8 +171,8 @@ class _PrediksiFormState extends State<PrediksiForm> {
   // checkboxformValues
   List<Map> sicknessCategories = [
     {'name': 'Anemia', 'isChecked': false},
-    {'name': 'Preeklampsi', 'isChecked': false},
     {'name': 'Hipertensi', 'isChecked': false},
+    {'name': 'Preeklampsi', 'isChecked': false},
     {'name': 'Diabetes', 'isChecked': false},
     {'name': 'Paru-paru', 'isChecked': false},
     {'name': 'Ginjal', 'isChecked': false},
@@ -125,8 +183,8 @@ class _PrediksiFormState extends State<PrediksiForm> {
 
   List<Map> inheritedSickness = [
     {'name': 'Anemia', 'isChecked': false},
-    {'name': 'Preeklampsi', 'isChecked': false},
     {'name': 'Hipertensi', 'isChecked': false},
+    {'name': 'Preeklampsi', 'isChecked': false},
     {'name': 'Diabetes', 'isChecked': false},
     {'name': 'Paru-paru', 'isChecked': false},
     {'name': 'Ginjal', 'isChecked': false},
@@ -188,7 +246,7 @@ class _PrediksiFormState extends State<PrediksiForm> {
                         color: pinkColor,
                       ),
                     ),
-                    showDuration: Duration(seconds: 3),
+                    showDuration: Duration(seconds: 4),
                     waitDuration: Duration(seconds: 1),
                     triggerMode: TooltipTriggerMode.tap,
                     textStyle: labelText.copyWith(color: Colors.white),
@@ -204,7 +262,7 @@ class _PrediksiFormState extends State<PrediksiForm> {
               TextFormField(
                 keyboardType: TextInputType.number,
                 textInputAction: TextInputAction.next,
-                controller: bloodTypeController,
+                controller: usia_ibu,
                 decoration: InputDecoration(
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(20),
@@ -217,7 +275,7 @@ class _PrediksiFormState extends State<PrediksiForm> {
                   // Konversi nilai usia ibu ke tipe data integer
                   int usiaIbu = int.tryParse(value) ?? 0;
 
-                  if (usiaIbu < 20 || usiaIbu > 35) {
+                  if (usiaIbu < 20 && usiaIbu > 35) {
                     // Jika usia ibu kurang dari 20 atau lebih dari 35, tambahkan skor
                     score += 1;
                   }
@@ -238,7 +296,8 @@ class _PrediksiFormState extends State<PrediksiForm> {
 
                   //Tooltip_fitur2
                   Tooltip(
-                    message: 'Isikan minggu kehamilan.',
+                    message:
+                        'Isikan minggu kehamilan.\n(Isikan lebih dari 1 Minggu atau kurang dari 42 Minggu)',
                     decoration: BoxDecoration(
                       color: pinkColor,
                       borderRadius: BorderRadius.circular(10),
@@ -251,7 +310,7 @@ class _PrediksiFormState extends State<PrediksiForm> {
                         color: pinkColor,
                       ),
                     ),
-                    showDuration: Duration(seconds: 3),
+                    showDuration: Duration(seconds: 5),
                     waitDuration: Duration(seconds: 1),
                     triggerMode: TooltipTriggerMode.tap,
                     textStyle: labelText.copyWith(color: Colors.white),
@@ -267,7 +326,7 @@ class _PrediksiFormState extends State<PrediksiForm> {
               TextFormField(
                 keyboardType: TextInputType.number,
                 textInputAction: TextInputAction.next,
-                controller: gestationalAgeController,
+                controller: usia_kandungan,
                 decoration: InputDecoration(
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(20),
@@ -275,20 +334,23 @@ class _PrediksiFormState extends State<PrediksiForm> {
                   hintText: 'Contoh: 23',
                   hintStyle: greyTextStyle.copyWith(fontSize: 14),
                 ),
+
                 // Logika untuk menentukan nilai pembobotan usiaKandungan
                 onChanged: (value) {
                   // Konversi nilai usia ibu ke tipe data integer
                   int usiaKandungan = int.tryParse(value) ?? 0;
 
-                  if (usiaKandungan < 4 || usiaKandungan > 42) {
+                  if (usiaKandungan < 4 && usiaKandungan > 42) {
                     // Jika usia ibu kurang dari 20 atau lebih dari 42, tambahkan skor
                     score += 1;
                   }
                 },
               ),
+
               SizedBox(
                 height: 20,
               ),
+
               Row(
                 children: [
                   Text(
@@ -323,6 +385,7 @@ class _PrediksiFormState extends State<PrediksiForm> {
                   )
                 ],
               ),
+
               const SizedBox(
                 height: 10,
               ),
@@ -337,13 +400,12 @@ class _PrediksiFormState extends State<PrediksiForm> {
                   hint: Text("Pilih golongan darah"),
                   underline: SizedBox(),
                   isExpanded: true,
-                  value: selectedBloodtype,
+                  value: selectedGolongan_darah,
                   onChanged: (value) {
+                    // Logika untuk menentukan nilai pembobotan untuk golonganDarah
                     setState(() {
-                      selectedBloodtype = value;
-
-                      // Logika untuk menentukan nilai pembobotan untuk golonganDarah
-                      if (selectedBloodtype == "Tidak Tahu") {
+                      selectedGolongan_darah = value;
+                      if (selectedGolongan_darah == "Tidak Tahu") {
                         // Jika golongan darah adalah "Tidak Tahu", tambahkan skor
                         score += 1;
                       }
@@ -361,6 +423,7 @@ class _PrediksiFormState extends State<PrediksiForm> {
               SizedBox(
                 height: 20,
               ),
+
               Row(
                 children: [
                   Text(
@@ -395,6 +458,7 @@ class _PrediksiFormState extends State<PrediksiForm> {
                   )
                 ],
               ),
+
               const SizedBox(
                 height: 10,
               ),
@@ -411,10 +475,9 @@ class _PrediksiFormState extends State<PrediksiForm> {
                   isExpanded: true,
                   value: selectedRhesus,
                   onChanged: (value) {
+                    // Logika untuk menentukan nilai pembobotan untuk rhesusDarah
                     setState(() {
                       selectedRhesus = value;
-
-                      // Logika untuk menentukan nilai pembobotan untuk rhesusDarah
                       if (selectedRhesus == "Tidak Tahu") {
                         // Jika rhesus adalah "Tidak Tahu", tambahkan skor
                         score += 1;
@@ -427,9 +490,11 @@ class _PrediksiFormState extends State<PrediksiForm> {
                       )).toList(),
                 ),
               ),
+
               SizedBox(
                 height: 20,
               ),
+
               Row(
                 children: [
                   Text(
@@ -464,6 +529,7 @@ class _PrediksiFormState extends State<PrediksiForm> {
                   )
                 ],
               ),
+
               const SizedBox(
                 height: 10,
               ),
@@ -483,7 +549,7 @@ class _PrediksiFormState extends State<PrediksiForm> {
                     setState(() {
                       selectedHamil = value;
 
-                      // Logika untuk menentukan nilai pembobotan untuk rhesusDarah
+                      // Logika untuk menentukan nilai pembobotan untuk hamilKeberapa
                       if (selectedHamil == "Lebih dari 4") {
                         // Jika jumlah "Hamil ke Berapa?" adalah "Lebih dari 4", tambahkan skor
                         score += 1;
@@ -499,6 +565,7 @@ class _PrediksiFormState extends State<PrediksiForm> {
               SizedBox(
                 height: 20,
               ),
+
               Row(
                 children: [
                   Text(
@@ -533,6 +600,7 @@ class _PrediksiFormState extends State<PrediksiForm> {
                   )
                 ],
               ),
+
               const SizedBox(
                 height: 10,
               ),
@@ -549,10 +617,9 @@ class _PrediksiFormState extends State<PrediksiForm> {
                   isExpanded: true,
                   value: selectedLahir,
                   onChanged: (value) {
+                    // Logika untuk menentukan nilai pembobotan untuk jumlah persalinan
                     setState(() {
                       selectedLahir = value;
-
-                      // Logika untuk menentukan nilai pembobotan untuk rhesusDarah
                       if (selectedLahir == "Lebih dari 4") {
                         // Jika jumlah persalinan adalah "Lebih dari 4", tambahkan skor
                         score += 1;
@@ -565,9 +632,11 @@ class _PrediksiFormState extends State<PrediksiForm> {
                       )).toList(),
                 ),
               ),
+
               SizedBox(
                 height: 20,
               ),
+
               Row(
                 children: [
                   Text(
@@ -602,6 +671,7 @@ class _PrediksiFormState extends State<PrediksiForm> {
                   )
                 ],
               ),
+
               const SizedBox(
                 height: 10,
               ),
@@ -617,10 +687,9 @@ class _PrediksiFormState extends State<PrediksiForm> {
                   isExpanded: true,
                   value: selectedGugur,
                   onChanged: (value) {
+                    // Logika untuk menentukan nilai pembobotan untuk jumlahKeguguran
                     setState(() {
                       selectedGugur = value;
-
-                      // Logika untuk menentukan nilai pembobotan untuk rhesusDarah
                       if (selectedGugur == "Lebih dari 3") {
                         // Jika jumlah keguguran adalah "Lebih dari 4", tambahkan skor
                         score += 1;
@@ -633,9 +702,11 @@ class _PrediksiFormState extends State<PrediksiForm> {
                       )).toList(),
                 ),
               ),
+
               SizedBox(
                 height: 20,
               ),
+
               Row(
                 children: [
                   Text(
@@ -670,6 +741,7 @@ class _PrediksiFormState extends State<PrediksiForm> {
                   )
                 ],
               ),
+
               const SizedBox(
                 height: 5,
               ),
@@ -694,9 +766,14 @@ class _PrediksiFormState extends State<PrediksiForm> {
                       value: selectedRadiohamil.no,
                       groupValue: _radioBtnform1,
                       activeColor: Colors.redAccent,
-                      onChanged: (selectedRadiohamil) {
+                      onChanged: (selectedRadio) {
                         setState(() {
-                          _radioBtnform1 = selectedRadiohamil!;
+                          // Logika untuk menentukan nilai pembobotan kelahiranTidakDiinginkan
+                          _radioBtnform1 = selectedRadio!;
+                          if (_radioBtnform1 == selectedRadiohamil.no) {
+                            // Jika "kelahiran tidak diinginkan" adalah Ya, tambahkan skor
+                            score += 1;
+                          }
                         });
                       }),
                   Text("Tidak"),
@@ -706,6 +783,7 @@ class _PrediksiFormState extends State<PrediksiForm> {
               SizedBox(
                 height: 20,
               ),
+
               Row(
                 children: [
                   Text(
@@ -740,6 +818,7 @@ class _PrediksiFormState extends State<PrediksiForm> {
                   )
                 ],
               ),
+
               const SizedBox(
                 height: 5,
               ),
@@ -753,9 +832,8 @@ class _PrediksiFormState extends State<PrediksiForm> {
                       activeColor: Colors.redAccent,
                       onChanged: (selectedRadio) {
                         setState(() {
-                          _radioBtnform2 = selectedRadio!;
-
                           // Logika untuk menentukan nilai pembobotan penggunaAlkohol
+                          _radioBtnform2 = selectedRadio!;
                           if (_radioBtnform2 == selectedRadioAlchohol.yes) {
                             // Jika "pengguna alkohol" adalah Ya, tambahkan skor
                             score += 1;
@@ -782,6 +860,7 @@ class _PrediksiFormState extends State<PrediksiForm> {
               SizedBox(
                 height: 20,
               ),
+
               Row(
                 children: [
                   Text(
@@ -816,6 +895,7 @@ class _PrediksiFormState extends State<PrediksiForm> {
                   )
                 ],
               ),
+
               const SizedBox(
                 height: 5,
               ),
@@ -829,9 +909,8 @@ class _PrediksiFormState extends State<PrediksiForm> {
                       activeColor: Colors.redAccent,
                       onChanged: (selectedRadio) {
                         setState(() {
-                          _radioBtnform3 = selectedRadio!;
-
                           // Logika untuk menentukan nilai pembobotan perokok
+                          _radioBtnform3 = selectedRadio!;
                           if (_radioBtnform3 == selectedRadioSmoker.yes) {
                             // Jika "perokok" adalah Ya, tambahkan skor
                             score += 1;
@@ -858,6 +937,7 @@ class _PrediksiFormState extends State<PrediksiForm> {
               SizedBox(
                 height: 20,
               ),
+
               Row(
                 children: [
                   Text(
@@ -892,6 +972,7 @@ class _PrediksiFormState extends State<PrediksiForm> {
                   )
                 ],
               ),
+
               const SizedBox(
                 height: 5,
               ),
@@ -905,9 +986,8 @@ class _PrediksiFormState extends State<PrediksiForm> {
                       activeColor: Colors.redAccent,
                       onChanged: (selectedRadio) {
                         setState(() {
-                          _radioBtnform4 = selectedRadio!;
-
                           // Logika untuk menentukan nilai pembobotan penggunaNarkoba
+                          _radioBtnform4 = selectedRadio!;
                           if (_radioBtnform4 == selectedRadioDrugs.yes) {
                             // Jika "pengguna narkoba" adalah Ya, tambahkan skor
                             score += 1;
@@ -934,6 +1014,7 @@ class _PrediksiFormState extends State<PrediksiForm> {
               SizedBox(
                 height: 20,
               ),
+
               Row(
                 children: [
                   Text(
@@ -960,7 +1041,7 @@ class _PrediksiFormState extends State<PrediksiForm> {
                         color: pinkColor,
                       ),
                     ),
-                    showDuration: Duration(seconds: 3),
+                    showDuration: Duration(seconds: 5),
                     waitDuration: Duration(seconds: 1),
                     triggerMode: TooltipTriggerMode.tap,
                     textStyle: labelText.copyWith(color: Colors.white),
@@ -969,6 +1050,7 @@ class _PrediksiFormState extends State<PrediksiForm> {
                   )
                 ],
               ),
+
               const SizedBox(
                 height: 5,
               ),
@@ -982,9 +1064,8 @@ class _PrediksiFormState extends State<PrediksiForm> {
                       activeColor: Colors.redAccent,
                       onChanged: (selectedRadio) {
                         setState(() {
-                          _radioBtnform5 = selectedRadio!;
-
                           // Logika untuk menentukan nilai pembobotan terpaparPolusi
+                          _radioBtnform5 = selectedRadio!;
                           if (_radioBtnform5 == selectedRadioPoluted.yes) {
                             // Jika "sering terpapar polusi" adalah Ya, tambahkan skor
                             score += 1;
@@ -1011,6 +1092,7 @@ class _PrediksiFormState extends State<PrediksiForm> {
               SizedBox(
                 height: 20,
               ),
+
               Row(
                 children: [
                   Expanded(
@@ -1039,7 +1121,7 @@ class _PrediksiFormState extends State<PrediksiForm> {
                         color: pinkColor,
                       ),
                     ),
-                    showDuration: Duration(seconds: 4),
+                    showDuration: Duration(seconds: 5),
                     waitDuration: Duration(seconds: 1),
                     triggerMode: TooltipTriggerMode.tap,
                     textStyle: labelText.copyWith(color: Colors.white),
@@ -1048,6 +1130,7 @@ class _PrediksiFormState extends State<PrediksiForm> {
                   )
                 ],
               ),
+
               const SizedBox(
                 height: 5,
               ),
@@ -1061,9 +1144,8 @@ class _PrediksiFormState extends State<PrediksiForm> {
                       activeColor: Colors.redAccent,
                       onChanged: (selectedRadio) {
                         setState(() {
-                          _radioBtnform6 = selectedRadio!;
-
                           // Logika untuk menentukan nilai pembobotan pendarahanPascaPersalinan
+                          _radioBtnform6 = selectedRadio!;
                           if (_radioBtnform6 ==
                               selectedRadioBleedingAfter.yes) {
                             // Jika "pernah memiliki riwayat pendarahan pasca persalinan" adalah Ya, tambahkan skor
@@ -1091,6 +1173,7 @@ class _PrediksiFormState extends State<PrediksiForm> {
               SizedBox(
                 height: 20,
               ),
+
               Row(
                 children: [
                   Expanded(
@@ -1119,7 +1202,7 @@ class _PrediksiFormState extends State<PrediksiForm> {
                         color: pinkColor,
                       ),
                     ),
-                    showDuration: Duration(seconds: 4),
+                    showDuration: Duration(seconds: 5),
                     waitDuration: Duration(seconds: 1),
                     triggerMode: TooltipTriggerMode.tap,
                     textStyle: labelText.copyWith(color: Colors.white),
@@ -1128,6 +1211,7 @@ class _PrediksiFormState extends State<PrediksiForm> {
                   )
                 ],
               ),
+
               const SizedBox(
                 height: 5,
               ),
@@ -1141,9 +1225,8 @@ class _PrediksiFormState extends State<PrediksiForm> {
                       activeColor: Colors.redAccent,
                       onChanged: (selectedRadio) {
                         setState(() {
-                          _radioBtnform7 = selectedRadio!;
-
                           // Logika untuk menentukan nilai pembobotan pendarahanKetikaHamil
+                          _radioBtnform7 = selectedRadio!;
                           if (_radioBtnform7 ==
                               selectedRadioBleedingWhile.yes) {
                             // Jika "pernah mengalami pendarahan ketika hamil" adalah Ya, tambahkan skor
@@ -1171,6 +1254,7 @@ class _PrediksiFormState extends State<PrediksiForm> {
               SizedBox(
                 height: 20,
               ),
+
               Row(
                 children: [
                   Text(
@@ -1205,6 +1289,7 @@ class _PrediksiFormState extends State<PrediksiForm> {
                   )
                 ],
               ),
+
               const SizedBox(
                 height: 5,
               ),
@@ -1220,12 +1305,6 @@ class _PrediksiFormState extends State<PrediksiForm> {
                         setState(() {
                           _radioBtnform8 = selectedRadio!;
                         });
-
-                        // Logika untuk menentukan nilai pembobotan penggunaGagdet
-                        if (_radioBtnform8 == selectedRadioGadget.yes) {
-                          // Jika "sering menggunakan gadget" adalah Ya, tambahkan skor
-                          score += 1;
-                        }
                       }),
                   Text("Ya"),
                   Padding(
@@ -1243,9 +1322,11 @@ class _PrediksiFormState extends State<PrediksiForm> {
                   Text("Tidak"),
                 ],
               ),
+
               SizedBox(
                 height: 20,
               ),
+
               Row(
                 children: [
                   Expanded(
@@ -1283,6 +1364,7 @@ class _PrediksiFormState extends State<PrediksiForm> {
                   )
                 ],
               ),
+
               const SizedBox(
                 height: 5,
               ),
@@ -1296,9 +1378,8 @@ class _PrediksiFormState extends State<PrediksiForm> {
                       activeColor: Colors.redAccent,
                       onChanged: (selectedRadio) {
                         setState(() {
-                          _radioBtnform9 = selectedRadio!;
-
                           // Logika untuk menentukan nilai pembobotan kelainanBawaan
+                          _radioBtnform9 = selectedRadio!;
                           if (_radioBtnform9 ==
                               selectedRadioAbnormalities.yes) {
                             // Jika "memiliki kelainan bawaan" adalah Ya, tambahkan skor
@@ -1326,6 +1407,7 @@ class _PrediksiFormState extends State<PrediksiForm> {
               SizedBox(
                 height: 20,
               ),
+
               Row(
                 children: [
                   Text(
@@ -1361,6 +1443,7 @@ class _PrediksiFormState extends State<PrediksiForm> {
                   )
                 ],
               ),
+
               const SizedBox(
                 height: 5,
               ),
@@ -1374,9 +1457,8 @@ class _PrediksiFormState extends State<PrediksiForm> {
                       activeColor: Colors.redAccent,
                       onChanged: (selectedRadio) {
                         setState(() {
-                          _radioBtnform10 = selectedRadio!;
-
                           // Logika untuk menentukan nilai pembobotan riwayatAlergi
+                          _radioBtnform10 = selectedRadio!;
                           if (_radioBtnform10 == selectedRadioAllergy.yes) {
                             // Jika "memiliki riwayat alergi" adalah Ya, tambahkan skor
                             score += 1;
@@ -1403,6 +1485,7 @@ class _PrediksiFormState extends State<PrediksiForm> {
               SizedBox(
                 height: 20,
               ),
+
               Row(
                 children: [
                   Text(
@@ -1437,6 +1520,7 @@ class _PrediksiFormState extends State<PrediksiForm> {
                   )
                 ],
               ),
+
               const SizedBox(
                 height: 5,
               ),
@@ -1450,9 +1534,8 @@ class _PrediksiFormState extends State<PrediksiForm> {
                       activeColor: Colors.redAccent,
                       onChanged: (selectedRadio) {
                         setState(() {
-                          _radioBtnform11 = selectedRadio!;
-
                           // Logika untuk menentukan nilai pembobotan operasiCaesar
+                          _radioBtnform11 = selectedRadio!;
                           if (_radioBtnform11 == selectedRadioCaesar.yes) {
                             // Jika "pernah operasi caesar" adalah Ya, tambahkan skor
                             score += 1;
@@ -1475,15 +1558,18 @@ class _PrediksiFormState extends State<PrediksiForm> {
                   Text("Tidak"),
                 ],
               ),
+
               SizedBox(
                 height: 20,
               ),
 
               Row(
                 children: [
-                  Text(
-                    'Jumlah Riwayat Caesar (Isi 0 Bila Tidak Pernah)',
-                    style: labelText,
+                  Expanded(
+                    child: Text(
+                      'Jumlah Riwayat Caesar\n(Isi 0 Bila Tidak Pernah)',
+                      style: labelText,
+                    ),
                   ),
                   SizedBox(
                     width: 5,
@@ -1504,7 +1590,7 @@ class _PrediksiFormState extends State<PrediksiForm> {
                         color: pinkColor,
                       ),
                     ),
-                    showDuration: Duration(seconds: 4),
+                    showDuration: Duration(seconds: 3),
                     waitDuration: Duration(seconds: 1),
                     triggerMode: TooltipTriggerMode.tap,
                     textStyle: labelText.copyWith(color: Colors.white),
@@ -1513,13 +1599,15 @@ class _PrediksiFormState extends State<PrediksiForm> {
                   )
                 ],
               ),
+
               const SizedBox(
                 height: 10,
               ),
+
               TextFormField(
                 keyboardType: TextInputType.number,
                 textInputAction: TextInputAction.next,
-                controller: caesarHistoryController,
+                controller: riwayat_caesar,
                 decoration: InputDecoration(
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(20),
@@ -1528,6 +1616,7 @@ class _PrediksiFormState extends State<PrediksiForm> {
                   hintStyle: greyTextStyle.copyWith(fontSize: 14),
                 ),
               ),
+
               SizedBox(
                 height: 20,
               ),
@@ -1567,6 +1656,7 @@ class _PrediksiFormState extends State<PrediksiForm> {
                   )
                 ],
               ),
+
               const SizedBox(
                 height: 10,
               ),
@@ -1580,9 +1670,8 @@ class _PrediksiFormState extends State<PrediksiForm> {
                     value: sick['isChecked'],
                     onChanged: (val) {
                       setState(() {
-                        sick['isChecked'] = val;
-
                         // Logika untuk menentukan nilai pembobotan riwayatPenyakit
+                        sick['isChecked'] = val;
                         if (sick['isChecked'] && sick['name'] != 'Tidak Ada') {
                           // Jika riwayat penyakit selain 'Tidak Ada', tambahkan skor
                           score += 1;
@@ -1633,9 +1722,11 @@ class _PrediksiFormState extends State<PrediksiForm> {
                   )
                 ],
               ),
+
               const SizedBox(
                 height: 10,
               ),
+
               // checkbox-2
               Column(
                   children: inheritedSickness.map((inherited) {
@@ -1645,9 +1736,8 @@ class _PrediksiFormState extends State<PrediksiForm> {
                     value: inherited['isChecked'],
                     onChanged: (val) {
                       setState(() {
-                        inherited['isChecked'] = val;
-
                         // Logika untuk menentukan nilai pembobotan penyakitKeturunan
+                        inherited['isChecked'] = val;
                         if (inherited['isChecked'] &&
                             inherited['name'] != 'Tidak Ada') {
                           // Jika penyakit keturunan selain 'Tidak Ada', tambahkan skor
@@ -1660,9 +1750,11 @@ class _PrediksiFormState extends State<PrediksiForm> {
               const Divider(
                 color: Colors.grey,
               ),
+              SizedBox(
+                height: 16,
+              ),
 
-              // submitButton
-              SizedBox(height: 16),
+              // Button Submit
               Center(
                 child: Container(
                   width: 277,
@@ -1674,7 +1766,7 @@ class _PrediksiFormState extends State<PrediksiForm> {
                       backgroundColor: pinkColor,
                     ),
                     onPressed: () {
-                      // Pop up konfirmasi form
+                      // Pop up konfirmasi
                       showDialog(
                         context: context,
                         builder: (context) {
@@ -1705,32 +1797,23 @@ class _PrediksiFormState extends State<PrediksiForm> {
                                 onPressed: () {
                                   Navigator.of(context).pop();
 
-                                  // Pop up hasil Prediksi Janin
+                                  // Pop Up "Baru" Hasil Prediksi Janin
+                                  predictJanin();
                                   showDialog(
                                     context: context,
                                     builder: (context) {
-                                      String prediksiResult;
-                                      // logika untuk menampilkan perhitungan skor
-                                      if (score >= 0 && score < 3) {
-                                        prediksiResult = 'Janin normal';
-                                      } else if (score >= 3) {
-                                        prediksiResult = 'Janin Berisiko';
-                                      } else {
-                                        prediksiResult =
-                                            'Error: Skor tidak valid';
-                                      }
-
+                                      final prediksiProvider =
+                                          Provider.of<PrediksiProvider>(context,
+                                              listen: false);
                                       return AlertDialog(
                                         title: Text('Hasil Prediksi'),
                                         content: Text(
-                                          "Janin anda dalam keadaan: \n$prediksiResult",
-                                          style: buttonText,
+                                          "Janin anda dalam keadaan ${prediksiProvider.result} \n \v Status kesehatan: ${prediksiProvider.result}",
                                         ),
                                         actions: [
                                           TextButton(
                                             style: TextButton.styleFrom(
-                                              backgroundColor: pinkColor,
-                                            ),
+                                                backgroundColor: pinkColor),
                                             child: Text(
                                               'OK',
                                               style: buttonText.copyWith(
@@ -1750,6 +1833,52 @@ class _PrediksiFormState extends State<PrediksiForm> {
                                       );
                                     },
                                   );
+
+                                  // Pop up "Lama" Hasil Prediksi Janin
+                                  // showDialog(
+                                  //   context: context,
+                                  //   builder: (context) {
+                                  //     String prediksiResult;
+                                  //     // logika untuk menampilkan perhitungan skor
+                                  //     if (score >= 0 && score < 2) {
+                                  //       prediksiResult = 'Janin normal';
+                                  //     } else if (score >= 1) {
+                                  //       prediksiResult = 'Janin Berisiko';
+                                  //     } else {
+                                  //       prediksiResult =
+                                  //           'Error: Skor tidak valid';
+                                  //     }
+
+                                  //     return AlertDialog(
+                                  //       title: Text('Hasil Prediksi'),
+                                  //       content: Text(
+                                  //         "Janin anda dalam keadaan: \n$prediksiResult",
+                                  //         style: buttonText,
+                                  //       ),
+                                  //       actions: [
+                                  // TextButton(
+                                  //   style: TextButton.styleFrom(
+                                  //     backgroundColor: pinkColor,
+                                  //   ),
+                                  //   child: Text(
+                                  //     'OK',
+                                  //     style: buttonText.copyWith(
+                                  //         color: whiteColor),
+                                  //   ),
+                                  //   onPressed: () {
+                                  //     Navigator.push(
+                                  //       context,
+                                  //       MaterialPageRoute(
+                                  //         builder: (context) =>
+                                  //             Navbar(),
+                                  //       ),
+                                  //     );
+                                  //   },
+                                  // ),
+                                  //       ],
+                                  //     );
+                                  //   },
+                                  // );
                                 },
                               ),
                             ],

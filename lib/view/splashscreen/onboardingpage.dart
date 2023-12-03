@@ -49,7 +49,7 @@ class _OnBoardingPageState extends State<OnBoardingPage> {
                 child: ElevatedButton(
                   child: Text(
                     "Lanjut",
-                    style: TextStyle(fontSize: 14),
+                    style: buttonText.copyWith(color: whiteColor,fontSize: 14),
                   ),
                   onPressed: () {
                     _pageController.nextPage(
