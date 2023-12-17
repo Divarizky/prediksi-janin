@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter_svg/svg.dart';
 import 'package:janin/theme.dart';
 import 'package:flutter/material.dart';
 import 'package:janin/view/signin/signin.dart';

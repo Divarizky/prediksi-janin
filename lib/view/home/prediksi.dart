@@ -1,37 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:janin/provider/prediksi.dart';
 import 'package:provider/provider.dart';
 import 'package:janin/provider/auth.dart';
+import 'package:http/http.dart' as http;
 import 'package:janin/view/home/navbar.dart';
-import 'package:janin/provider/prediksi.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../theme.dart';
 import 'dart:convert';
-// import 'package:enum_to_string/enum_to_string.dart';
-// import 'dart:math';
-
-// OpsiRadio
-enum selectedRadiohamil { yes, no, others, n }
-
-enum selectedRadioAlchohol { yes, no, others, n }
-
-enum selectedRadioSmoker { yes, no, others, n }
-
-enum selectedRadioDrugs { yes, no, others, n }
-
-enum selectedRadioPoluted { yes, no, others, n }
-
-enum selectedRadioBleedingAfter { yes, no, others, n }
-
-enum selectedRadioBleedingWhile { yes, no, others, n }
-
-enum selectedRadioGadget { yes, no, others, n }
-
-enum selectedRadioAbnormalities { yes, no, others, n }
-
-enum selectedRadioAllergy { yes, no, others, n }
-
-enum selectedRadioCaesar { yes, no, others, n }
 
 class PrediksiForm extends StatefulWidget {
   const PrediksiForm({super.key});
@@ -96,8 +71,21 @@ class _PrediksiFormState extends State<PrediksiForm> {
     "Lebih dari 3",
   ];
 
+  // value RadioButton
+  String selectedKehamilan_diinginkan = '';
+  String selectedPenggunaan_alkohol = '';
+  String selected_perokok = '';
+  String selected_narkoba = '';
+  String selected_polusi = '';
+  String selectedPendarahaan_pasca_lahir = '';
+  String selectedPendarahan_ketika_hamil = '';
+  String selected_gadget = '';
+  String selectedRiwayat_kelainan = '';
+  String selected_alergi = '';
+  String selectedPernah_caesar = '';
+
   // checkboxformValues
-  List<Map> sicknessCategories = [
+  List<Map> riwayat_penyakit = [
     {'name': 'Anemia', 'isChecked': false},
     {'name': 'Hipertensi', 'isChecked': false},
     {'name': 'Preeklampsi', 'isChecked': false},
@@ -109,7 +97,7 @@ class _PrediksiFormState extends State<PrediksiForm> {
     {'name': 'Tidak ada', 'isChecked': false},
   ];
 
-  List<Map> inheritedSickness = [
+  List<Map> penyakit_turunan = [
     {'name': 'Anemia', 'isChecked': false},
     {'name': 'Hipertensi', 'isChecked': false},
     {'name': 'Preeklampsi', 'isChecked': false},
@@ -120,49 +108,38 @@ class _PrediksiFormState extends State<PrediksiForm> {
     {'name': 'Lainnya', 'isChecked': false},
     {'name': 'Tidak ada', 'isChecked': false},
   ];
-
-  // RadioButtonForm
-  selectedRadiohamil _radioBtnform1 = selectedRadiohamil.n;
-  selectedRadioAlchohol _radioBtnform2 = selectedRadioAlchohol.n;
-  selectedRadioSmoker _radioBtnform3 = selectedRadioSmoker.n;
-  selectedRadioDrugs _radioBtnform4 = selectedRadioDrugs.n;
-  selectedRadioPoluted _radioBtnform5 = selectedRadioPoluted.n;
-  selectedRadioBleedingAfter _radioBtnform6 = selectedRadioBleedingAfter.n;
-  selectedRadioBleedingWhile _radioBtnform7 = selectedRadioBleedingWhile.n;
-  selectedRadioGadget _radioBtnform8 = selectedRadioGadget.n;
-  selectedRadioAbnormalities _radioBtnform9 = selectedRadioAbnormalities.n;
-  selectedRadioAllergy _radioBtnform10 = selectedRadioAllergy.n;
-  selectedRadioCaesar _radioBtnform11 = selectedRadioCaesar.n;
 
   Future<void> predictJanin() async {
     final url =
-        'http://127.0.0.1:5000/predict'; // Ganti dengan alamat Flask server
-    // final headers = {'Content-Type': 'application/json'};
+        'http://153.92.4.162:5002/predict'; // Ganti dengan alamat Flask server
+    final headers = {'Content-Type': 'application/json'};
     final data = {
       'usia_ibu': usia_ibu.text,
       'usia_kandungan': usia_kandungan.text,
       'golongan_darah': selectedGolongan_darah,
       'rhesus': selectedRhesus,
       'hamil_ke_brp': selectedHamil,
+      'jumlah_persalinan': selectedLahir,
       'jumlah_keguguran': selectedGugur,
-      'kehamilan_diinginkan': selectedRadiohamil,
-      'penggunaan_alkohol': selectedRadioAlchohol,
-      'narkoba': selectedRadioDrugs,
-      'polusi': selectedRadioPoluted,
-      'pendarahaan_pasca_lahir': selectedRadioBleedingAfter,
-      'pendarahan_ketika_hamil': selectedRadioBleedingWhile,
-      'gadget': selectedRadioGadget,
-      'riwayat_kelainan': selectedRadioAbnormalities,
-      'alergi': selectedRadioAllergy,
-      'pernah_caesar': selectedRadioCaesar,
+      'kehamilan_diinginkan': selectedKehamilan_diinginkan,
+      'penggunaan_alkohol': selectedPenggunaan_alkohol,
+      'perokok': selected_perokok,
+      'narkoba': selected_narkoba,
+      'polusi': selected_polusi,
+      'pendarahaan_pasca_lahir': selectedPendarahaan_pasca_lahir,
+      'pendarahan_ketika_hamil': selectedPendarahan_ketika_hamil,
+      'gadget': selected_gadget,
+      'riwayat_kelainan': selectedRiwayat_kelainan,
+      'alergi': selected_alergi,
+      'pernah_caesar': selectedPernah_caesar,
       'riwayat_caesar': riwayat_caesar.text,
-      'riwayat_penyakit': sicknessCategories,
-      'penyakit_turunan': inheritedSickness,
+      'riwayat_penyakit': riwayat_penyakit,
+      'penyakit_turunan': penyakit_turunan,
     };
 
     var response = await http.post(
       Uri.parse(url),
-      headers: {'Content-Type': 'application/json'},
+      headers: headers,
       body: jsonEncode(data),
     );
 
@@ -174,7 +151,13 @@ class _PrediksiFormState extends State<PrediksiForm> {
       final responseData = jsonDecode(response.body);
       setState(() {
         prediksiProvider.setResult(
-          responseData['result'] == 1 ? 'Janin Normal' : 'Janin Berisiko',
+          responseData['result'] == 0
+              ? 'Berisiko Tinggi'
+              : responseData['result'] == 1
+                  ? 'Normal'
+                  : responseData['result'] == 2
+                      ? 'Berisiko Rendah'
+                      : 'Sangat Berisiko',
         );
 
         // firestore
@@ -190,9 +173,6 @@ class _PrediksiFormState extends State<PrediksiForm> {
       });
     }
   }
-
-  // Inisialisasi variabel untuk menyimpan nilai pembobotan
-  int score = 0;
 
   @override
   Widget build(BuildContext context) {
@@ -272,16 +252,6 @@ class _PrediksiFormState extends State<PrediksiForm> {
                     hintText: 'Contoh: 23',
                     hintStyle: greyTextStyle.copyWith(fontSize: 14),
                   ),
-                  // Logika untuk menentukan nilai pembobotan usiaIbu
-                  // onChanged: (value) {
-                  //   // Konversi nilai usia ibu ke tipe data integer
-                  //   int usiaIbu = int.tryParse(value) ?? 0;
-
-                  //   if (usiaIbu < 20 && usiaIbu > 35) {
-                  //     // Jika usia ibu kurang dari 20 atau lebih dari 35, tambahkan skor
-                  //     score += 1;
-                  //   }
-                  // },
                 ),
                 SizedBox(
                   height: 20,
@@ -299,7 +269,7 @@ class _PrediksiFormState extends State<PrediksiForm> {
                     //Tooltip_fitur2
                     Tooltip(
                       message:
-                          'Isikan minggu kehamilan.\n(Isikan lebih dari 1 Minggu atau kurang dari 42 Minggu)',
+                          'Isikan minggu kehamilan.\notValue(Isikan lebih dari 1 Minggu atau kurang dari 42 Minggu)',
                       decoration: BoxDecoration(
                         color: pinkColor,
                         borderRadius: BorderRadius.circular(10),
@@ -336,17 +306,6 @@ class _PrediksiFormState extends State<PrediksiForm> {
                     hintText: 'Contoh: 23',
                     hintStyle: greyTextStyle.copyWith(fontSize: 14),
                   ),
-
-                  // Logika untuk menentukan nilai pembobotan usiaKandungan
-                  // onChanged: (value) {
-                  //   Konversi nilai usia ibu ke tipe data integer
-                  //   int usiaKandungan = int.tryParse(value) ?? 0;
-
-                  //   if (usiaKandungan < 4 && usiaKandungan > 42) {
-                  //     // Jika usia ibu kurang dari 20 atau lebih dari 42, tambahkan skor
-                  //     score += 1;
-                  //   }
-                  // },
                 ),
 
                 SizedBox(
@@ -404,13 +363,8 @@ class _PrediksiFormState extends State<PrediksiForm> {
                     isExpanded: true,
                     value: selectedGolongan_darah,
                     onChanged: (value) {
-                      // Logika untuk menentukan nilai pembobotan untuk golonganDarah
                       setState(() {
                         selectedGolongan_darah = value;
-                        //   if (selectedGolongan_darah == "Tidak Tahu") {
-                        //     // Jika golongan darah adalah "Tidak Tahu", tambahkan skor
-                        //     score += 1;
-                        //   }
                       });
                     },
                     items: golongan_darah
@@ -477,13 +431,8 @@ class _PrediksiFormState extends State<PrediksiForm> {
                     isExpanded: true,
                     value: selectedRhesus,
                     onChanged: (value) {
-                      // Logika untuk menentukan nilai pembobotan untuk rhesusDarah
                       setState(() {
                         selectedRhesus = value;
-                        // if (selectedRhesus == "Tidak Tahu") {
-                        //   // Jika rhesus adalah "Tidak Tahu", tambahkan skor
-                        //   score += 1;
-                        // }
                       });
                     },
                     items: rhesus
@@ -552,12 +501,6 @@ class _PrediksiFormState extends State<PrediksiForm> {
                     onChanged: (value) {
                       setState(() {
                         selectedHamil = value;
-
-                        // Logika untuk menentukan nilai pembobotan untuk hamilKeberapa
-                        // if (selectedHamil == "Lebih dari 4") {
-                        //   // Jika jumlah "Hamil ke Berapa?" adalah "Lebih dari 4", tambahkan skor
-                        //   score += 1;
-                        // }
                       });
                     },
                     items: jml_hamil
@@ -623,13 +566,8 @@ class _PrediksiFormState extends State<PrediksiForm> {
                     isExpanded: true,
                     value: selectedLahir,
                     onChanged: (value) {
-                      // Logika untuk menentukan nilai pembobotan untuk jumlah persalinan
                       setState(() {
                         selectedLahir = value;
-                        // if (selectedLahir == "Lebih dari 4") {
-                        //   // Jika jumlah persalinan adalah "Lebih dari 4", tambahkan skor
-                        //   score += 1;
-                        // }
                       });
                     },
                     items: jml_lahir
@@ -695,13 +633,8 @@ class _PrediksiFormState extends State<PrediksiForm> {
                     isExpanded: true,
                     value: selectedGugur,
                     onChanged: (value) {
-                      // Logika untuk menentukan nilai pembobotan untuk jumlahKeguguran
                       setState(() {
                         selectedGugur = value;
-                        // if (selectedGugur == "Lebih dari 3") {
-                        //   // Jika jumlah keguguran adalah "Lebih dari 4", tambahkan skor
-                        //   score += 1;
-                        // }
                       });
                     },
                     items: jml_keguguran
@@ -760,12 +693,12 @@ class _PrediksiFormState extends State<PrediksiForm> {
                 Row(
                   children: [
                     Radio(
-                        value: selectedRadiohamil.yes,
-                        groupValue: _radioBtnform1,
+                        value: 'yes',
+                        groupValue: selectedKehamilan_diinginkan,
                         activeColor: Colors.redAccent,
-                        onChanged: (selectedRadiohamil) {
+                        onChanged: (value) {
                           setState(() {
-                            _radioBtnform1 = selectedRadiohamil!;
+                            selectedKehamilan_diinginkan = value as String;
                           });
                         }),
                     Text("Ya"),
@@ -773,17 +706,12 @@ class _PrediksiFormState extends State<PrediksiForm> {
                       padding: EdgeInsets.only(left: 75),
                     ),
                     Radio(
-                        value: selectedRadiohamil.no,
-                        groupValue: _radioBtnform1,
+                        value: 'no',
+                        groupValue: selectedKehamilan_diinginkan,
                         activeColor: Colors.redAccent,
-                        onChanged: (selectedRadio) {
+                        onChanged: (value) {
                           setState(() {
-                            // Logika untuk menentukan nilai pembobotan kelahiranTidakDiinginkan
-                            _radioBtnform1 = selectedRadio!;
-                            // if (_radioBtnform1 == selectedRadiohamil.no) {
-                            //   // Jika "kelahiran tidak diinginkan" adalah Ya, tambahkan skor
-                            //   score += 1;
-                            // }
+                            selectedKehamilan_diinginkan = value as String;
                           });
                         }),
                     Text("Tidak"),
@@ -837,17 +765,12 @@ class _PrediksiFormState extends State<PrediksiForm> {
                 Row(
                   children: [
                     Radio(
-                        value: selectedRadioAlchohol.yes,
-                        groupValue: _radioBtnform2,
+                        value: 'yes',
+                        groupValue: selectedPenggunaan_alkohol,
                         activeColor: Colors.redAccent,
-                        onChanged: (selectedRadio) {
+                        onChanged: (value) {
                           setState(() {
-                            // Logika untuk menentukan nilai pembobotan penggunaAlkohol
-                            _radioBtnform2 = selectedRadio!;
-                            if (_radioBtnform2 == selectedRadioAlchohol.yes) {
-                              // Jika "pengguna alkohol" adalah Ya, tambahkan skor
-                              score += 1;
-                            }
+                            selectedPenggunaan_alkohol = value as String;
                           });
                         }),
                     Text("Ya"),
@@ -855,12 +778,12 @@ class _PrediksiFormState extends State<PrediksiForm> {
                       padding: EdgeInsets.only(left: 75),
                     ),
                     Radio(
-                        value: selectedRadioAlchohol.no,
-                        groupValue: _radioBtnform2,
+                        value: 'no',
+                        groupValue: selectedPenggunaan_alkohol,
                         activeColor: Colors.redAccent,
-                        onChanged: (selectedRadio) {
+                        onChanged: (value) {
                           setState(() {
-                            _radioBtnform2 = selectedRadio!;
+                            selectedPenggunaan_alkohol = value as String;
                           });
                         }),
                     Text("Tidak"),
@@ -914,17 +837,12 @@ class _PrediksiFormState extends State<PrediksiForm> {
                 Row(
                   children: [
                     Radio(
-                        value: selectedRadioSmoker.yes,
-                        groupValue: _radioBtnform3,
+                        value: 'yes',
+                        groupValue: selected_perokok,
                         activeColor: Colors.redAccent,
-                        onChanged: (selectedRadio) {
+                        onChanged: (value) {
                           setState(() {
-                            // Logika untuk menentukan nilai pembobotan perokok
-                            _radioBtnform3 = selectedRadio!;
-                            // if (_radioBtnform3 == selectedRadioSmoker.yes) {
-                            //   // Jika "perokok" adalah Ya, tambahkan skor
-                            //   score += 1;
-                            // }
+                            selected_perokok = value as String;
                           });
                         }),
                     Text("Ya"),
@@ -932,12 +850,12 @@ class _PrediksiFormState extends State<PrediksiForm> {
                       padding: EdgeInsets.only(left: 75),
                     ),
                     Radio(
-                        value: selectedRadioSmoker.no,
-                        groupValue: _radioBtnform3,
+                        value: 'no',
+                        groupValue: selected_perokok,
                         activeColor: Colors.redAccent,
-                        onChanged: (selectedRadio) {
+                        onChanged: (value) {
                           setState(() {
-                            _radioBtnform3 = selectedRadio!;
+                            selected_perokok = value as String;
                           });
                         }),
                     Text("Tidak"),
@@ -991,17 +909,12 @@ class _PrediksiFormState extends State<PrediksiForm> {
                 Row(
                   children: [
                     Radio(
-                        value: selectedRadioDrugs.yes,
-                        groupValue: _radioBtnform4,
+                        value: 'yes',
+                        groupValue: selected_narkoba,
                         activeColor: Colors.redAccent,
-                        onChanged: (selectedRadio) {
+                        onChanged: (value) {
                           setState(() {
-                            // Logika untuk menentukan nilai pembobotan penggunaNarkoba
-                            _radioBtnform4 = selectedRadio!;
-                            // if (_radioBtnform4 == selectedRadioDrugs.yes) {
-                            //   // Jika "pengguna narkoba" adalah Ya, tambahkan skor
-                            //   score += 1;
-                            // }
+                            selected_narkoba = value as String;
                           });
                         }),
                     Text("Ya"),
@@ -1009,12 +922,12 @@ class _PrediksiFormState extends State<PrediksiForm> {
                       padding: EdgeInsets.only(left: 75),
                     ),
                     Radio(
-                        value: selectedRadioDrugs.no,
-                        groupValue: _radioBtnform4,
+                        value: 'no',
+                        groupValue: selected_narkoba,
                         activeColor: Colors.redAccent,
-                        onChanged: (selectedRadio) {
+                        onChanged: (value) {
                           setState(() {
-                            _radioBtnform4 = selectedRadio!;
+                            selected_narkoba = value as String;
                           });
                         }),
                     Text("Tidak"),
@@ -1069,17 +982,12 @@ class _PrediksiFormState extends State<PrediksiForm> {
                 Row(
                   children: [
                     Radio(
-                        value: selectedRadioPoluted.yes,
-                        groupValue: _radioBtnform5,
+                        value: 'yes',
+                        groupValue: selected_polusi,
                         activeColor: Colors.redAccent,
-                        onChanged: (selectedRadio) {
+                        onChanged: (value) {
                           setState(() {
-                            // Logika untuk menentukan nilai pembobotan terpaparPolusi
-                            _radioBtnform5 = selectedRadio!;
-                            // if (_radioBtnform5 == selectedRadioPoluted.yes) {
-                            //   // Jika "sering terpapar polusi" adalah Ya, tambahkan skor
-                            //   score += 1;
-                            // }
+                            selected_polusi = value as String;
                           });
                         }),
                     Text("Ya"),
@@ -1087,12 +995,12 @@ class _PrediksiFormState extends State<PrediksiForm> {
                       padding: EdgeInsets.only(left: 75),
                     ),
                     Radio(
-                        value: selectedRadioPoluted.no,
-                        groupValue: _radioBtnform5,
+                        value: 'no',
+                        groupValue: selected_polusi,
                         activeColor: Colors.redAccent,
-                        onChanged: (selectedRadio) {
+                        onChanged: (value) {
                           setState(() {
-                            _radioBtnform5 = selectedRadio!;
+                            selected_polusi = value as String;
                           });
                         }),
                     Text("Tidak"),
@@ -1118,7 +1026,7 @@ class _PrediksiFormState extends State<PrediksiForm> {
                     //Tooltip_fitur13
                     Tooltip(
                       message:
-                          'Pilih "Ya" jika ada tindakan pasca persalinan.\n'
+                          'Pilih "Ya" jika ada tindakan pasca persalinan.\notValue'
                           'Misalkan: pasang infus.',
                       decoration: BoxDecoration(
                         color: pinkColor,
@@ -1150,18 +1058,12 @@ class _PrediksiFormState extends State<PrediksiForm> {
                 Row(
                   children: [
                     Radio(
-                        value: selectedRadioBleedingAfter.yes,
-                        groupValue: _radioBtnform6,
+                        value: 'yes',
+                        groupValue: selectedPendarahaan_pasca_lahir,
                         activeColor: Colors.redAccent,
-                        onChanged: (selectedRadio) {
+                        onChanged: (value) {
                           setState(() {
-                            // Logika untuk menentukan nilai pembobotan pendarahanPascaPersalinan
-                            _radioBtnform6 = selectedRadio!;
-                            // if (_radioBtnform6 ==
-                            //     selectedRadioBleedingAfter.yes) {
-                            //   // Jika "pernah memiliki riwayat pendarahan pasca persalinan" adalah Ya, tambahkan skor
-                            //   score += 1;
-                            // }
+                            selectedPendarahaan_pasca_lahir = value as String;
                           });
                         }),
                     Text("Ya"),
@@ -1169,12 +1071,12 @@ class _PrediksiFormState extends State<PrediksiForm> {
                       padding: EdgeInsets.only(left: 75),
                     ),
                     Radio(
-                        value: selectedRadioBleedingAfter.no,
-                        groupValue: _radioBtnform6,
+                        value: 'no',
+                        groupValue: selectedPendarahaan_pasca_lahir,
                         activeColor: Colors.redAccent,
-                        onChanged: (selectedRadio) {
+                        onChanged: (value) {
                           setState(() {
-                            _radioBtnform6 = selectedRadio!;
+                            selectedPendarahaan_pasca_lahir = value as String;
                           });
                         }),
                     Text("Tidak"),
@@ -1231,18 +1133,12 @@ class _PrediksiFormState extends State<PrediksiForm> {
                 Row(
                   children: [
                     Radio(
-                        value: selectedRadioBleedingWhile.yes,
-                        groupValue: _radioBtnform7,
+                        value: 'yes',
+                        groupValue: selectedPendarahan_ketika_hamil,
                         activeColor: Colors.redAccent,
-                        onChanged: (selectedRadio) {
+                        onChanged: (value) {
                           setState(() {
-                            // Logika untuk menentukan nilai pembobotan pendarahanKetikaHamil
-                            _radioBtnform7 = selectedRadio!;
-                            // if (_radioBtnform7 ==
-                            //     selectedRadioBleedingWhile.yes) {
-                            //   // Jika "pernah mengalami pendarahan ketika hamil" adalah Ya, tambahkan skor
-                            //   score += 1;
-                            // }
+                            selectedPendarahan_ketika_hamil = value as String;
                           });
                         }),
                     Text("Ya"),
@@ -1250,12 +1146,12 @@ class _PrediksiFormState extends State<PrediksiForm> {
                       padding: EdgeInsets.only(left: 75),
                     ),
                     Radio(
-                        value: selectedRadioBleedingWhile.no,
-                        groupValue: _radioBtnform7,
+                        value: 'no',
+                        groupValue: selectedPendarahan_ketika_hamil,
                         activeColor: Colors.redAccent,
-                        onChanged: (selectedRadio) {
+                        onChanged: (value) {
                           setState(() {
-                            _radioBtnform7 = selectedRadio!;
+                            selectedPendarahan_ketika_hamil = value as String;
                           });
                         }),
                     Text("Tidak"),
@@ -1309,12 +1205,12 @@ class _PrediksiFormState extends State<PrediksiForm> {
                 Row(
                   children: [
                     Radio(
-                        value: selectedRadioGadget.yes,
-                        groupValue: _radioBtnform8,
+                        value: 'yes',
+                        groupValue: selected_gadget,
                         activeColor: Colors.redAccent,
-                        onChanged: (selectedRadio) {
+                        onChanged: (value) {
                           setState(() {
-                            _radioBtnform8 = selectedRadio!;
+                            selected_gadget = value as String;
                           });
                         }),
                     Text("Ya"),
@@ -1322,12 +1218,12 @@ class _PrediksiFormState extends State<PrediksiForm> {
                       padding: EdgeInsets.only(left: 75),
                     ),
                     Radio(
-                        value: selectedRadioGadget.no,
-                        groupValue: _radioBtnform8,
+                        value: 'no',
+                        groupValue: selected_gadget,
                         activeColor: Colors.redAccent,
-                        onChanged: (selectedRadio) {
+                        onChanged: (value) {
                           setState(() {
-                            _radioBtnform8 = selectedRadio!;
+                            selected_gadget = value as String;
                           });
                         }),
                     Text("Tidak"),
@@ -1384,18 +1280,12 @@ class _PrediksiFormState extends State<PrediksiForm> {
                 Row(
                   children: [
                     Radio(
-                        value: selectedRadioAbnormalities.yes,
-                        groupValue: _radioBtnform9,
+                        value: 'yes',
+                        groupValue: selectedRiwayat_kelainan,
                         activeColor: Colors.redAccent,
-                        onChanged: (selectedRadio) {
+                        onChanged: (value) {
                           setState(() {
-                            // Logika untuk menentukan nilai pembobotan kelainanBawaan
-                            _radioBtnform9 = selectedRadio!;
-                            // if (_radioBtnform9 ==
-                            //     selectedRadioAbnormalities.yes) {
-                            //   // Jika "memiliki kelainan bawaan" adalah Ya, tambahkan skor
-                            //   score += 1;
-                            // }
+                            selectedRiwayat_kelainan = value as String;
                           });
                         }),
                     Text("Ya"),
@@ -1403,12 +1293,12 @@ class _PrediksiFormState extends State<PrediksiForm> {
                       padding: EdgeInsets.only(left: 75),
                     ),
                     Radio(
-                        value: selectedRadioAbnormalities.no,
-                        groupValue: _radioBtnform9,
+                        value: 'no',
+                        groupValue: selectedRiwayat_kelainan,
                         activeColor: Colors.redAccent,
-                        onChanged: (selectedRadio) {
+                        onChanged: (value) {
                           setState(() {
-                            _radioBtnform9 = selectedRadio!;
+                            selectedRiwayat_kelainan = value as String;
                           });
                         }),
                     Text("Tidak"),
@@ -1463,17 +1353,12 @@ class _PrediksiFormState extends State<PrediksiForm> {
                 Row(
                   children: [
                     Radio(
-                        value: selectedRadioAllergy.yes,
-                        groupValue: _radioBtnform10,
+                        value: 'yes',
+                        groupValue: selected_alergi,
                         activeColor: Colors.redAccent,
-                        onChanged: (selectedRadio) {
+                        onChanged: (value) {
                           setState(() {
-                            // Logika untuk menentukan nilai pembobotan riwayatAlergi
-                            _radioBtnform10 = selectedRadio!;
-                            // if (_radioBtnform10 == selectedRadioAllergy.yes) {
-                            //   // Jika "memiliki riwayat alergi" adalah Ya, tambahkan skor
-                            //   score += 1;
-                            // }
+                            selected_alergi = value as String;
                           });
                         }),
                     Text("Ya"),
@@ -1481,12 +1366,12 @@ class _PrediksiFormState extends State<PrediksiForm> {
                       padding: EdgeInsets.only(left: 75),
                     ),
                     Radio(
-                        value: selectedRadioAllergy.no,
-                        groupValue: _radioBtnform10,
+                        value: 'no',
+                        groupValue: selected_alergi,
                         activeColor: Colors.redAccent,
-                        onChanged: (selectedRadio) {
+                        onChanged: (value) {
                           setState(() {
-                            _radioBtnform10 = selectedRadio!;
+                            selected_alergi = value as String;
                           });
                         }),
                     Text("Tidak"),
@@ -1540,17 +1425,12 @@ class _PrediksiFormState extends State<PrediksiForm> {
                 Row(
                   children: [
                     Radio(
-                        value: selectedRadioCaesar.yes,
-                        groupValue: _radioBtnform11,
+                        value: 'yes',
+                        groupValue: selectedPendarahan_ketika_hamil,
                         activeColor: Colors.redAccent,
-                        onChanged: (selectedRadio) {
+                        onChanged: (value) {
                           setState(() {
-                            // Logika untuk menentukan nilai pembobotan operasiCaesar
-                            _radioBtnform11 = selectedRadio!;
-                            // if (_radioBtnform11 == selectedRadioCaesar.yes) {
-                            //   // Jika "pernah operasi caesar" adalah Ya, tambahkan skor
-                            //   score += 1;
-                            // }
+                            selectedPernah_caesar = value as String;
                           });
                         }),
                     Text("Ya"),
@@ -1558,12 +1438,12 @@ class _PrediksiFormState extends State<PrediksiForm> {
                       padding: EdgeInsets.only(left: 75),
                     ),
                     Radio(
-                        value: selectedRadioCaesar.no,
-                        groupValue: _radioBtnform11,
+                        value: 'no',
+                        groupValue: selectedPernah_caesar,
                         activeColor: Colors.redAccent,
-                        onChanged: (selectedRadio) {
+                        onChanged: (value) {
                           setState(() {
-                            _radioBtnform11 = selectedRadio!;
+                            selectedPernah_caesar = value as String;
                           });
                         }),
                     Text("Tidak"),
@@ -1672,20 +1552,14 @@ class _PrediksiFormState extends State<PrediksiForm> {
 
                 // checkbox-1
                 Column(
-                    children: sicknessCategories.map((sick) {
+                    children: riwayat_penyakit.map((sick) {
                   return CheckboxListTile(
                       activeColor: Colors.redAccent,
                       title: Text(sick['name']),
                       value: sick['isChecked'],
                       onChanged: (val) {
                         setState(() {
-                          // Logika untuk menentukan nilai pembobotan riwayatPenyakit
-                          // sick['isChecked'] = val;
-                          // if (sick['isChecked'] &&
-                          //     sick['name'] != 'Tidak Ada') {
-                          //   // Jika riwayat penyakit selain 'Tidak Ada', tambahkan skor
-                          //   score += 1;
-                          // }
+                          sick['isChecked'] = val;
                         });
                       });
                 }).toList()),
@@ -1739,20 +1613,14 @@ class _PrediksiFormState extends State<PrediksiForm> {
 
                 // checkbox-2
                 Column(
-                    children: inheritedSickness.map((inherited) {
+                    children: penyakit_turunan.map((inherited) {
                   return CheckboxListTile(
                       activeColor: Colors.redAccent,
                       title: Text(inherited['name']),
                       value: inherited['isChecked'],
                       onChanged: (val) {
                         setState(() {
-                          // Logika untuk menentukan nilai pembobotan penyakitKeturunan
-                          // inherited['isChecked'] = val;
-                          // if (inherited['isChecked'] &&
-                          //     inherited['name'] != 'Tidak Ada') {
-                          //   // Jika penyakit keturunan selain 'Tidak Ada', tambahkan skor
-                          //   score += 1;
-                          // }
+                          inherited['isChecked'] = val;
                         });
                       });
                 }).toList()),
@@ -1808,8 +1676,6 @@ class _PrediksiFormState extends State<PrediksiForm> {
                                         buttonText.copyWith(color: whiteColor),
                                   ),
                                   onPressed: () {
-                                    Navigator.of(context).pop();
-
                                     // Pop Up "Baru" Hasil Prediksi Janin
                                     predictJanin();
                                     showDialog(
@@ -1847,52 +1713,6 @@ class _PrediksiFormState extends State<PrediksiForm> {
                                         );
                                       },
                                     );
-
-                                    // Pop up "Lama" Hasil Prediksi Janin
-                                    // showDialog(
-                                    //   context: context,
-                                    //   builder: (context) {
-                                    //     String prediksiResult;
-                                    //     // logika untuk menampilkan perhitungan skor
-                                    //     if (score >= 0 && score < 2) {
-                                    //       prediksiResult = 'Janin normal';
-                                    //     } else if (score >= 1) {
-                                    //       prediksiResult = 'Janin Berisiko';
-                                    //     } else {
-                                    //       prediksiResult =
-                                    //           'Error: Skor tidak valid';
-                                    //     }
-
-                                    //     return AlertDialog(
-                                    //       title: Text('Hasil Prediksi'),
-                                    //       content: Text(
-                                    //         "Janin anda dalam keadaan: \n$prediksiResult",
-                                    //         style: buttonText,
-                                    //       ),
-                                    //       actions: [
-                                    // TextButton(
-                                    //   style: TextButton.styleFrom(
-                                    //     backgroundColor: pinkColor,
-                                    //   ),
-                                    //   child: Text(
-                                    //     'OK',
-                                    //     style: buttonText.copyWith(
-                                    //         color: whiteColor),
-                                    //   ),
-                                    //   onPressed: () {
-                                    //     Navigator.push(
-                                    //       context,
-                                    //       MaterialPageRoute(
-                                    //         builder: (context) =>
-                                    //             Navbar(),
-                                    //       ),
-                                    //     );
-                                    //   },
-                                    // ),
-                                    //       ],
-                                    //     );
-                                    //   },
-                                    // );
                                   },
                                 ),
                               ],
